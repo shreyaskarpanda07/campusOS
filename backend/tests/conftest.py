@@ -13,6 +13,7 @@ from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import StaticPool
 
 from app.db.base import Base
+import app.models  # noqa: F401
 from app.core.dependencies import get_db
 from app.main import app
 

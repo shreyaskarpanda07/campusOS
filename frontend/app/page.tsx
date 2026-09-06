@@ -1,22 +1,25 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { fetchHealth, type HealthData } from "@/lib/api";
+import Link from "next/link";
+import { fetchHealth, logoutUser, type HealthData } from "@/lib/api";
+import { clearAuth, getStoredUser } from "@/lib/auth";
+import { User } from "@/lib/types";
+import { Button } from "@/components/ui/Button";
 
 /**
- * Landing page — shows the CampusOS branding and backend connection status.
- *
- * This page confirms that:
- * 1. The Next.js frontend is running.
- * 2. The frontend can reach the FastAPI backend.
- * 3. The backend can reach PostgreSQL.
+ * Landing page — shows CampusOS branding, auth actions, and backend connection status.
  */
 export default function HomePage() {
   const [health, setHealth] = useState<HealthData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
 
   useEffect(() => {
+    // Check client-side stored user
+    setCurrentUser(getStoredUser());
+
     fetchHealth()
       .then((res) => {
         setHealth(res.data);
@@ -29,16 +32,61 @@ export default function HomePage() {
       .finally(() => setLoading(false));
   }, []);
 
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } catch {
+      // Clean up local auth even if network fails
+    } finally {
+      clearAuth();
+      setCurrentUser(null);
+    }
+  };
+
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center p-8">
+    <main className="flex min-h-screen flex-col items-center justify-center p-8 bg-gray-50">
       {/* ── Branding ──────────────────────────────────────────── */}
-      <div className="text-center mb-12">
-        <h1 className="text-5xl font-bold tracking-tight text-primary-700 mb-3">
+      <div className="text-center mb-8">
+        <h1 className="text-5xl font-extrabold tracking-tight text-primary-700 mb-3">
           CampusOS
         </h1>
-        <p className="text-lg text-gray-600 max-w-md">
+        <p className="text-lg text-gray-600 max-w-md mx-auto">
           Personalized opportunity intelligence for university students.
         </p>
+      </div>
+
+      {/* ── User Auth State / Action Bar ──────────────────────── */}
+      <div className="mb-8 w-full max-w-md bg-white border border-gray-200 rounded-xl p-5 shadow-sm text-center">
+        {currentUser ? (
+          <div>
+            <p className="text-sm text-gray-600 mb-1">Signed in as</p>
+            <p className="text-base font-semibold text-gray-900 mb-4">
+              {currentUser.name} ({currentUser.email})
+            </p>
+            <div className="flex justify-center gap-3">
+              <Button
+                variant="outline"
+                onClick={handleLogout}
+              >
+                Sign Out
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div>
+            <p className="text-sm text-gray-600 mb-4">
+              Get personalized opportunities matched to your degree and skills.
+            </p>
+            <div className="flex justify-center gap-3">
+              <Link href="/login">
+                <Button variant="outline">Sign In</Button>
+              </Link>
+              <Link href="/signup">
+                <Button variant="primary">Create Account</Button>
+              </Link>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Connection Status Card ────────────────────────────── */}
@@ -86,7 +134,7 @@ export default function HomePage() {
 
       {/* ── Footer hint ───────────────────────────────────────── */}
       <p className="mt-8 text-sm text-gray-400">
-        Phase 1 — Foundation scaffold
+        CampusOS — Phase 2 Authentication Ready
       </p>
     </main>
   );

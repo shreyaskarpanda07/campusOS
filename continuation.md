@@ -1,248 +1,155 @@
-# CampusOS — Phase 1 Continuation Guide
+# CampusOS — Continuation & Execution Guide
 
-Follow these steps **in order** to get the project running locally.
+CampusOS is an opportunity intelligence platform for university students built as a modular monolith:
+- **Backend:** Python 3.12 + FastAPI + SQLAlchemy + Alembic + PostgreSQL (pgvector)
+- **Frontend:** Next.js 15 (App Router) + TypeScript + Tailwind CSS
+- **Testing:** Pytest (backend) + Vitest (frontend)
 
 ---
 
-## 1. Backend Setup
+## Current Status: Phase 2 (Authentication) Complete
 
-Open a terminal in the `backend/` folder:
+The project now has complete, tested, and secure authentication across backend and frontend.
 
+### What Was Built in Phase 2:
+1. **User SQLAlchemy Model** (`backend/app/models/user.py`):
+   - Supports UUID primary keys, email index, bcrypt password hash, academic details, and opportunity preferences.
+2. **Alembic Initial Migration** (`backend/migrations/versions/001_create_users_table.py`):
+   - Creates the `users` table with unique indexes and cross-database JSON support (Postgres JSONB with SQLite fallback).
+3. **Security Utilities** (`backend/app/core/security.py`):
+   - Passlib Bcrypt password hashing & verification.
+   - Python-Jose JWT access token encoding & decoding with configurable expiration.
+4. **Auth Schemas** (`backend/app/schemas/user.py`):
+   - Request models with Pydantic validation (email format, password min length 8).
+   - Response models guaranteeing passwords are never leaked.
+5. **Auth Service Layer** (`backend/app/services/auth.py`):
+   - Separates business logic from HTTP handlers (`register_user`, `authenticate_user`).
+   - Standard error handling returning `EMAIL_TAKEN` (409) and `INVALID_CREDENTIALS` (401).
+6. **Auth Router** (`backend/app/routers/auth.py`):
+   - `POST /api/auth/register` (201 Created)
+   - `POST /api/auth/login` (200 OK)
+   - `POST /api/auth/logout` (200 OK, requires Bearer token)
+7. **Auth Dependency Injection** (`backend/app/core/dependencies.py`):
+   - `get_current_user`
+   - `get_current_active_user`
+   - `get_current_admin_user`
+8. **Automated Backend Tests** (`backend/tests/test_auth.py`):
+   - 10 unit and integration tests covering hashing, JWT validity, duplicate rejection, validation errors, and protected routes.
+9. **Frontend Auth & UI** (`frontend/`):
+   - Reusable accessible UI components: `Button.tsx`, `Input.tsx`.
+   - Client storage helpers (`lib/auth.ts`) for JWT tokens and cached user profiles.
+   - API client methods (`lib/api.ts`): `registerUser`, `loginUser`, `logoutUser`, `authFetch`.
+   - `/signup` page with real-time validation and error alert.
+   - `/login` page with session redirection.
+   - Landing page with dynamic sign-in / sign-out controls.
+   - 5 Vitest tests covering auth storage and API behavior (`frontend/__tests__/auth.test.ts`).
+
+---
+
+## Local Development Instructions
+
+### 1. Database Setup
+Start PostgreSQL via Docker from the project root:
+```bash
+docker compose up -d postgres
+```
+Database credentials: `campusos` / `campusos` on port `5432`.
+
+### 2. Backend Setup
 ```bash
 cd backend
 
 # Create virtual environment
 python -m venv venv
 
-# Activate it (Windows)
-venv\Scripts\activate
+# Activate (Windows PowerShell)
+.\venv\Scripts\Activate.ps1
+
+# Activate (macOS/Linux)
+# source venv/bin/activate
 
 # Install dependencies
 pip install -r requirements.txt
-```
 
-## 2. Database Setup
-
-Make sure Docker is running, then from the **project root**:
-
-```bash
-docker compose up -d postgres
-```
-
-This starts PostgreSQL 16 with pgvector on `localhost:5432`.  
-Credentials: `campusos` / `campusos` / database `campusos`.
-
-If you already have PostgreSQL installed locally, create the database manually:
-
-```sql
-CREATE DATABASE campusos;
-CREATE USER campusos WITH PASSWORD 'campusos';
-GRANT ALL PRIVILEGES ON DATABASE campusos TO campusos;
-```
-
-## 3. Environment Variables
-
-From the project root:
-
-```bash
-cp .env.example backend/.env
-```
-
-Edit `backend/.env` if your database credentials differ from the defaults.
-
-## 4. Run Alembic Migrations
-
-```bash
-cd backend
+# Run migrations
 alembic upgrade head
-```
 
-> **Note:** Phase 1 has no models yet, so this will just verify the connection.  
-> The first real migration will be created in Phase 2 (Authentication).
-
-## 5. Start the Backend
-
-```bash
-cd backend
+# Start FastAPI server
 uvicorn app.main:app --reload --port 8000
 ```
+- API Docs: [http://localhost:8000/docs](http://localhost:8000/docs)
+- Health Check: [http://localhost:8000/api/health](http://localhost:8000/api/health)
 
-Verify: open [http://localhost:8000/api/health](http://localhost:8000/api/health)  
-Expected response:
-
-```json
-{
-  "data": {
-    "status": "healthy",
-    "database": "connected",
-    "version": "0.1.0"
-  },
-  "error": null
-}
-```
-
-API docs: [http://localhost:8000/docs](http://localhost:8000/docs)
-
-## 6. Run Backend Tests
-
+### 3. Run Backend Tests
+In `backend/`:
 ```bash
-cd backend
 pytest -v
 ```
+All 16 tests should pass:
+- 4 Health check tests (`tests/test_health.py`)
+- 2 Config loading tests (`tests/test_config.py`)
+- 10 Auth & security tests (`tests/test_auth.py`)
 
-Expected output:
-
-```
-tests/test_config.py::test_default_settings PASSED
-tests/test_config.py::test_cors_origins_default PASSED
-tests/test_health.py::test_health_returns_200 PASSED
-tests/test_health.py::test_health_response_shape PASSED
-tests/test_health.py::test_health_data_fields PASSED
-tests/test_health.py::test_health_database_connected PASSED
-```
-
-## 7. Frontend Setup
-
-Open a **new** terminal in the `frontend/` folder:
-
+### 4. Frontend Setup
+In a new terminal:
 ```bash
 cd frontend
 
-# Copy env template
+# Copy environment template
 cp .env.local.example .env.local
 
 # Install dependencies
 npm install
 
-# Start dev server
+# Run frontend dev server
 npm run dev
 ```
+- Web Application: [http://localhost:3000](http://localhost:3000)
+- Sign Up: [http://localhost:3000/signup](http://localhost:3000/signup)
+- Sign In: [http://localhost:3000/login](http://localhost:3000/login)
 
-Open [http://localhost:3000](http://localhost:3000).  
-You should see the CampusOS landing page with three green status indicators:
-- **Backend** — v0.1.0
-- **Database** — connected
-- **Frontend** — Running
-
-## 8. Run Frontend Tests
-
+### 5. Run Frontend Tests
+In `frontend/`:
 ```bash
-cd frontend
 npm test
 ```
-
-Expected: 3 tests passing (fetchHealth success, error handling, URL construction).
+All 8 tests should pass (3 API client tests, 5 Auth storage and network tests).
 
 ---
 
-## What Was Built (Phase 1)
+## Architecture Flow
 
-### Git Commits (all pushed to GitHub)
-
-| # | Commit | Description |
-|---|--------|-------------|
-| 1 | `chore: initialize repository with root config files and docs` | .gitignore, .env.example, docker-compose.yml, README.md, docs/, evaluation/ |
-| 2 | `feat: add backend skeleton with FastAPI, SQLAlchemy, Alembic, and health check` | 25 files — full backend structure |
-| 3 | `feat: add frontend skeleton with Next.js, Tailwind CSS, and health status page` | 15 files — full frontend structure |
-
-### Files Created
-
-```
-Root (5 files)
-├── README.md              — Project overview + setup instructions
-├── .gitignore             — Python, Node, env, IDE exclusions
-├── .env.example           — Environment variable template
-├── docker-compose.yml     — PostgreSQL + pgvector container
-└── docs/                  — PRD.md, DESIGN.md, TECH_STACK.md
-
-Backend (25 files)
-├── requirements.txt       — Pinned Python dependencies
-├── alembic.ini            — Alembic config
-├── app/
-│   ├── main.py            — FastAPI app factory with CORS
-│   ├── core/
-│   │   ├── config.py      — Pydantic Settings from env
-│   │   ├── security.py    — Placeholder (Phase 2)
-│   │   └── dependencies.py — DB session dependency
-│   ├── db/
-│   │   ├── session.py     — SQLAlchemy engine + SessionLocal
-│   │   └── base.py        — Declarative Base + TimestampMixin
-│   ├── models/            — Empty (Phase 2)
-│   ├── schemas/
-│   │   └── common.py      — ApiResponse + ErrorDetail
-│   ├── routers/
-│   │   └── health.py      — GET /api/health
-│   ├── services/          — Empty (Phase 2)
-│   └── workers/           — Empty (Phase 9)
-├── migrations/
-│   ├── env.py             — Alembic env with settings integration
-│   ├── script.py.mako     — Migration template
-│   └── versions/          — Empty (Phase 2)
-└── tests/
-    ├── conftest.py        — SQLite test DB + TestClient fixtures
-    ├── test_health.py     — 4 health endpoint tests
-    └── test_config.py     — 2 config loading tests
-
-Frontend (15 files)
-├── package.json           — Next.js 15 + React 19 + Tailwind + Vitest
-├── tsconfig.json          — Strict TS with @/ alias
-├── next.config.ts         — Minimal Next.js config
-├── tailwind.config.ts     — Blue primary palette
-├── postcss.config.mjs     — Tailwind + Autoprefixer
-├── vitest.config.ts       — jsdom + @/ alias
-├── .env.local.example     — NEXT_PUBLIC_API_URL
-├── app/
-│   ├── globals.css        — Tailwind + light/dark vars
-│   ├── layout.tsx         — Root layout with metadata
-│   └── page.tsx           — Landing page + health status
-├── lib/
-│   ├── api.ts             — fetchHealth API client
-│   └── types.ts           — Shared TS types
-├── components/
-│   ├── ui/                — Empty (Phase 3+)
-│   └── features/          — Empty (Phase 3+)
-└── __tests__/
-    └── api.test.ts        — 3 API client tests
-```
-
-### Architecture Implemented
-
-```
-Browser → Next.js (port 3000)
-              │
-              │  fetch("/api/health")
-              ▼
-         FastAPI (port 8000)
-              │
-              │  SELECT 1
-              ▼
-         PostgreSQL (port 5432)
+```text
+Browser / Next.js Client
+       │
+       ├── POST /api/auth/register ──────┐
+       ├── POST /api/auth/login ─────────┼──→ FastAPI (Modular Monolith)
+       ├── POST /api/auth/logout ────────┤         │
+       └── GET  /api/health ─────────────┘         ▼
+                                             AuthService / Security
+                                                   │
+                                                   ▼
+                                            SQLAlchemy ORM
+                                                   │
+                                                   ▼
+                                         PostgreSQL (users table)
 ```
 
 ---
 
-## Known Issues
+## Next Step: Phase 3 — User Profile
 
-1. **CRLF warnings** — Git shows LF→CRLF warnings on Windows. Harmless.
-2. **No real DB models yet** — Alembic has no migrations; the first migration will come with the User model in Phase 2.
-3. **SQLite test DB** — Tests use in-memory SQLite for speed. PostgreSQL-specific features (JSONB, pgvector) will need a separate integration test setup later.
-4. **No auth yet** — All endpoints are unauthenticated. Phase 2 adds JWT.
-
----
-
-## Next Step: Phase 2 — Authentication
-
-The exact next implementation step is:
-
-1. Create the `User` SQLAlchemy model (`backend/app/models/user.py`)
-2. Generate the first Alembic migration
-3. Implement password hashing with bcrypt (`security.py`)
-4. Implement JWT token generation and validation
-5. Create `POST /api/auth/register` endpoint
-6. Create `POST /api/auth/login` endpoint
-7. Create `POST /api/auth/logout` endpoint
-8. Add auth dependency for protected routes
-9. Write auth tests
-10. Create basic login/signup frontend pages
-
-**Tell me to start Phase 2 when you're ready.**
+The next milestone is implementing the academic profile and preferences engine (FR-01):
+1. Create `Skill`, `UserSkill`, `Interest`, `UserInterest` SQLAlchemy models.
+2. Generate Alembic migration `002_create_profile_tables`.
+3. Create Pydantic schemas for Profile update, Skills catalog, and Interests.
+4. Implement UserService:
+   - `GET /api/users/me` — returns complete user profile with skills and interests
+   - `PATCH /api/users/me` — updates academic details (university, degree, branch, graduation_year, current_year, cgpa, opportunity preferences)
+   - `PUT /api/users/me/skills` — synchronizes user skills and proficiency
+   - `PUT /api/users/me/interests` — synchronizes user interest tags
+5. Create Profile frontend page (`/app/profile`):
+   - Academic section (university, degree, branch, year, CGPA)
+   - Tag-based input for Skills and Interests
+   - Preference selectors (opportunity types, work modes)
+6. Add unit and integration tests for profile management.

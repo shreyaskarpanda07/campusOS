@@ -13,7 +13,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 
 from app.core.config import settings
-from app.routers import auth, health, users
+from app.routers import auth, health, opportunities, users
 
 
 def create_app() -> FastAPI:
@@ -71,10 +71,10 @@ def create_app() -> FastAPI:
             },
         )
 
-    # ── Routers ──────────────────────────────────────────────────────
     application.include_router(health.router, prefix="/api", tags=["health"])
     application.include_router(auth.router, prefix="/api", tags=["auth"])
     application.include_router(users.router, prefix="/api", tags=["users"])
+    application.include_router(opportunities.router, prefix="/api", tags=["opportunities"])
 
     return application
 

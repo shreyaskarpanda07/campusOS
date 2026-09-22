@@ -1,4 +1,4 @@
 # Routers module — FastAPI route handlers
-from app.routers import auth, health, users
+from app.routers import auth, health, opportunities, users
 
-__all__ = ["auth", "health", "users"]
+__all__ = ["auth", "health", "opportunities", "users"]

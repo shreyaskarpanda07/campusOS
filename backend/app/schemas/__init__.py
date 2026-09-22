@@ -2,11 +2,19 @@
 from app.schemas.common import ApiResponse, ErrorDetail
 from app.schemas.user import (
     AuthResponseData,
+    InterestItem,
+    InterestRead,
+    SkillItem,
+    SkillRead,
     TokenData,
     UserBase,
+    UserInterestsUpdateRequest,
     UserLoginRequest,
+    UserProfileResponse,
+    UserProfileUpdateRequest,
     UserRead,
     UserRegisterRequest,
+    UserSkillsUpdateRequest,
 )
 
 __all__ = [
@@ -16,6 +24,14 @@ __all__ = [
     "UserRegisterRequest",
     "UserLoginRequest",
     "UserRead",
+    "UserProfileResponse",
+    "UserProfileUpdateRequest",
+    "SkillItem",
+    "SkillRead",
+    "UserSkillsUpdateRequest",
+    "InterestItem",
+    "InterestRead",
+    "UserInterestsUpdateRequest",
     "TokenData",
     "AuthResponseData",
 ]

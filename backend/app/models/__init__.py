@@ -1,6 +1,8 @@
 # Models module — SQLAlchemy ORM models
 from app.models.interest import Interest, UserInterest
+from app.models.opportunity import Opportunity, OpportunitySkill
 from app.models.skill import Skill, UserSkill
+from app.models.source import OpportunitySource, Source
 from app.models.user import User
 
 __all__ = [
@@ -9,4 +11,8 @@ __all__ = [
     "UserSkill",
     "Interest",
     "UserInterest",
+    "Opportunity",
+    "OpportunitySkill",
+    "Source",
+    "OpportunitySource",
 ]

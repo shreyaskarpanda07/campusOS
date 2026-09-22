@@ -1,5 +1,15 @@
 # Schemas module — Pydantic request/response models
 from app.schemas.common import ApiResponse, ErrorDetail
+from app.schemas.opportunity import (
+    OpportunityCreateRequest,
+    OpportunityDetail,
+    OpportunityListResponse,
+    OpportunityRead,
+    OpportunitySkillItem,
+    OpportunitySkillRead,
+    OpportunitySourceRead,
+    PaginationMeta,
+)
 from app.schemas.user import (
     AuthResponseData,
     InterestItem,
@@ -34,4 +44,12 @@ __all__ = [
     "UserInterestsUpdateRequest",
     "TokenData",
     "AuthResponseData",
+    "OpportunityCreateRequest",
+    "OpportunityRead",
+    "OpportunityDetail",
+    "OpportunitySkillItem",
+    "OpportunitySkillRead",
+    "OpportunitySourceRead",
+    "OpportunityListResponse",
+    "PaginationMeta",
 ]

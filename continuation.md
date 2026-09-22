@@ -7,42 +7,38 @@ CampusOS is an opportunity intelligence platform for university students built a
 
 ---
 
-## Current Status: Phase 2 (Authentication) Complete
+## Current Status: Phase 3 (User Profile & Preferences) Complete
 
-The project now has complete, tested, and secure authentication across backend and frontend.
+The platform now provides comprehensive student profile and preference management (FR-01) with database persistence, canonical skill and interest mapping, and responsive UI.
 
-### What Was Built in Phase 2:
-1. **User SQLAlchemy Model** (`backend/app/models/user.py`):
-   - Supports UUID primary keys, email index, bcrypt password hash, academic details, and opportunity preferences.
-2. **Alembic Initial Migration** (`backend/migrations/versions/001_create_users_table.py`):
-   - Creates the `users` table with unique indexes and cross-database JSON support (Postgres JSONB with SQLite fallback).
-3. **Security Utilities** (`backend/app/core/security.py`):
-   - Passlib Bcrypt password hashing & verification.
-   - Python-Jose JWT access token encoding & decoding with configurable expiration.
-4. **Auth Schemas** (`backend/app/schemas/user.py`):
-   - Request models with Pydantic validation (email format, password min length 8).
-   - Response models guaranteeing passwords are never leaked.
-5. **Auth Service Layer** (`backend/app/services/auth.py`):
-   - Separates business logic from HTTP handlers (`register_user`, `authenticate_user`).
-   - Standard error handling returning `EMAIL_TAKEN` (409) and `INVALID_CREDENTIALS` (401).
-6. **Auth Router** (`backend/app/routers/auth.py`):
-   - `POST /api/auth/register` (201 Created)
-   - `POST /api/auth/login` (200 OK)
-   - `POST /api/auth/logout` (200 OK, requires Bearer token)
-7. **Auth Dependency Injection** (`backend/app/core/dependencies.py`):
-   - `get_current_user`
-   - `get_current_active_user`
-   - `get_current_admin_user`
-8. **Automated Backend Tests** (`backend/tests/test_auth.py`):
-   - 10 unit and integration tests covering hashing, JWT validity, duplicate rejection, validation errors, and protected routes.
-9. **Frontend Auth & UI** (`frontend/`):
-   - Reusable accessible UI components: `Button.tsx`, `Input.tsx`.
-   - Client storage helpers (`lib/auth.ts`) for JWT tokens and cached user profiles.
-   - API client methods (`lib/api.ts`): `registerUser`, `loginUser`, `logoutUser`, `authFetch`.
-   - `/signup` page with real-time validation and error alert.
-   - `/login` page with session redirection.
-   - Landing page with dynamic sign-in / sign-out controls.
-   - 5 Vitest tests covering auth storage and API behavior (`frontend/__tests__/auth.test.ts`).
+### What Was Built in Phase 3:
+1. **SQLAlchemy Models** (`backend/app/models/`):
+   - `Skill` (`skills` table) with unique name index.
+   - `UserSkill` (`user_skills` junction table) with proficiency rating.
+   - `Interest` (`interests` table) with unique name index.
+   - `UserInterest` (`user_interests` junction table).
+   - `User` model extended with `preferred_locations` and relationships to skills and interests.
+2. **Alembic Migration** (`backend/migrations/versions/002_create_profile_tables.py`):
+   - Creates `skills`, `user_skills`, `interests`, `user_interests` tables and adds `preferred_locations` JSON column to `users`.
+3. **Pydantic Schemas** (`backend/app/schemas/user.py`):
+   - `UserProfileResponse`, `UserProfileUpdateRequest`, `SkillItem`, `SkillRead`, `UserSkillsUpdateRequest`, `InterestItem`, `InterestRead`, `UserInterestsUpdateRequest`.
+4. **User Service Layer** (`backend/app/services/user.py`):
+   - `get_profile`: Aggregates user academic data, skills with proficiency, and interests into a clean schema.
+   - `update_profile`: Updates academic background (university, degree, branch, year, CGPA) and multi-select preferences (types, work modes, locations).
+   - `sync_skills`: Canonicalizes skill names, prevents duplicates, and links to user.
+   - `sync_interests`: Canonicalizes interest names, prevents duplicates, and links to user.
+5. **Profile Router** (`backend/app/routers/users.py`):
+   - `GET /api/users/me` — Read current authenticated profile.
+   - `PATCH /api/users/me` — Update academic details and preferences.
+   - `PUT /api/users/me/skills` — Synchronize skills and proficiency levels.
+   - `PUT /api/users/me/interests` — Synchronize career interests.
+6. **Backend Tests** (`backend/tests/test_users.py`):
+   - 7 unit and integration tests covering GET/PATCH/PUT, boundary validation (CGPA <= 10.0), and strict user data isolation.
+7. **Frontend Profile & Tag Input** (`frontend/`):
+   - `TagInput.tsx` reusable component supporting tag pills, removal, and optional skill proficiency selector.
+   - `/profile` page supporting full academic background editing, opportunity type toggles, work mode toggles, location tags, skill tags, and interest tags.
+   - Updated `page.tsx` with direct link to profile management when signed in.
+   - 4 Vitest tests covering profile API client methods (`frontend/__tests__/profile.test.ts`).
 
 ---
 
@@ -59,7 +55,7 @@ Database credentials: `campusos` / `campusos` on port `5432`.
 ```bash
 cd backend
 
-# Create virtual environment
+# Create virtual environment (if not already created)
 python -m venv venv
 
 # Activate (Windows PowerShell)
@@ -71,7 +67,7 @@ python -m venv venv
 # Install dependencies
 pip install -r requirements.txt
 
-# Run migrations
+# Run migrations to latest version
 alembic upgrade head
 
 # Start FastAPI server
@@ -85,18 +81,16 @@ In `backend/`:
 ```bash
 pytest -v
 ```
-All 16 tests should pass:
+All **23 tests** will pass:
 - 4 Health check tests (`tests/test_health.py`)
 - 2 Config loading tests (`tests/test_config.py`)
 - 10 Auth & security tests (`tests/test_auth.py`)
+- 7 Profile & preferences tests (`tests/test_users.py`)
 
 ### 4. Frontend Setup
 In a new terminal:
 ```bash
 cd frontend
-
-# Copy environment template
-cp .env.local.example .env.local
 
 # Install dependencies
 npm install
@@ -105,51 +99,36 @@ npm install
 npm run dev
 ```
 - Web Application: [http://localhost:3000](http://localhost:3000)
-- Sign Up: [http://localhost:3000/signup](http://localhost:3000/signup)
 - Sign In: [http://localhost:3000/login](http://localhost:3000/login)
+- Sign Up: [http://localhost:3000/signup](http://localhost:3000/signup)
+- Student Profile: [http://localhost:3000/profile](http://localhost:3000/profile)
 
 ### 5. Run Frontend Tests
 In `frontend/`:
 ```bash
 npm test
 ```
-All 8 tests should pass (3 API client tests, 5 Auth storage and network tests).
+All **12 tests** will pass:
+- 3 API client & health check tests (`__tests__/api.test.ts`)
+- 5 Auth storage & authentication tests (`__tests__/auth.test.ts`)
+- 4 Profile management API tests (`__tests__/profile.test.ts`)
 
 ---
 
-## Architecture Flow
+## Next Step: Phase 4 — Opportunity CRUD & Discovery
 
-```text
-Browser / Next.js Client
-       │
-       ├── POST /api/auth/register ──────┐
-       ├── POST /api/auth/login ─────────┼──→ FastAPI (Modular Monolith)
-       ├── POST /api/auth/logout ────────┤         │
-       └── GET  /api/health ─────────────┘         ▼
-                                             AuthService / Security
-                                                   │
-                                                   ▼
-                                            SQLAlchemy ORM
-                                                   │
-                                                   ▼
-                                         PostgreSQL (users table)
-```
-
----
-
-## Next Step: Phase 3 — User Profile
-
-The next milestone is implementing the academic profile and preferences engine (FR-01):
-1. Create `Skill`, `UserSkill`, `Interest`, `UserInterest` SQLAlchemy models.
-2. Generate Alembic migration `002_create_profile_tables`.
-3. Create Pydantic schemas for Profile update, Skills catalog, and Interests.
-4. Implement UserService:
-   - `GET /api/users/me` — returns complete user profile with skills and interests
-   - `PATCH /api/users/me` — updates academic details (university, degree, branch, graduation_year, current_year, cgpa, opportunity preferences)
-   - `PUT /api/users/me/skills` — synchronizes user skills and proficiency
-   - `PUT /api/users/me/interests` — synchronizes user interest tags
-5. Create Profile frontend page (`/app/profile`):
-   - Academic section (university, degree, branch, year, CGPA)
-   - Tag-based input for Skills and Interests
-   - Preference selectors (opportunity types, work modes)
-6. Add unit and integration tests for profile management.
+The next milestone is implementing opportunity data models and discovery APIs (FR-02, FR-03, FR-07):
+1. Create `Opportunity`, `OpportunitySkill`, `Source`, `OpportunitySource` SQLAlchemy models.
+2. Generate Alembic migration `003_create_opportunity_tables`.
+3. Create Pydantic schemas for Opportunity create, detail, list query filters, and pagination.
+4. Implement `OpportunityService`:
+   - Admin opportunity creation with skill requirements and source provenance.
+   - Filterable opportunity discovery (`type`, `work_mode`, `location`, `organization`, `search`, `min_cgpa`).
+   - Opportunity detail retrieval by ID.
+5. Create Opportunity Router (`backend/app/routers/opportunities.py`):
+   - `GET /api/opportunities` — search, filter, paginate
+   - `GET /api/opportunities/{id}` — single opportunity detail
+   - `POST /api/opportunities` — admin-only opportunity creation
+6. Create database seeding script (`backend/scripts/seed_opportunities.py`) with realistic sample opportunities (internships, hackathons, case competitions, fellowships).
+7. Create Discover page (`/discover`) with search bar, filter sidebar, and opportunity cards.
+8. Add unit and integration tests for opportunity CRUD, search, and filtering.

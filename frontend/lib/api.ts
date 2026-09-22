@@ -6,7 +6,7 @@
  */
 
 import { getToken } from "./auth";
-import { AuthResponseData, User } from "./types";
+import { AuthResponseData, Interest, Skill, User, UserProfileUpdate } from "./types";
 
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000/api";
@@ -143,4 +143,47 @@ export async function authFetch<T>(
   });
 
   return handleResponse<T>(res);
+}
+
+/**
+ * Fetch full profile of current authenticated student.
+ */
+export async function fetchMyProfile(): Promise<User> {
+  return authFetch<User>("/users/me");
+}
+
+/**
+ * Update academic background and preferences.
+ */
+export async function updateMyProfile(
+  payload: UserProfileUpdate
+): Promise<User> {
+  return authFetch<User>("/users/me", {
+    method: "PATCH",
+    body: JSON.stringify(payload),
+  });
+}
+
+/**
+ * Synchronize skills list with proficiency.
+ */
+export async function updateMySkills(
+  skills: { name: string; proficiency?: string | null }[]
+): Promise<Skill[]> {
+  return authFetch<Skill[]>("/users/me/skills", {
+    method: "PUT",
+    body: JSON.stringify({ skills }),
+  });
+}
+
+/**
+ * Synchronize career/opportunity interests.
+ */
+export async function updateMyInterests(
+  interests: { name: string }[]
+): Promise<Interest[]> {
+  return authFetch<Interest[]>("/users/me/interests", {
+    method: "PUT",
+    body: JSON.stringify({ interests }),
+  });
 }

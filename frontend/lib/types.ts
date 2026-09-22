@@ -5,6 +5,17 @@
  * frontend/backend contracts in sync.
  */
 
+export interface Skill {
+  id: string;
+  name: string;
+  proficiency?: string | null;
+}
+
+export interface Interest {
+  id: string;
+  name: string;
+}
+
 /** User profile model. */
 export interface User {
   id: string;
@@ -18,9 +29,25 @@ export interface User {
   cgpa: number | null;
   preferred_opportunity_types: string[];
   preferred_work_modes: string[];
+  preferred_locations: string[];
+  skills?: Skill[];
+  interests?: Interest[];
   is_admin: boolean;
   created_at: string;
   updated_at: string;
+}
+
+export interface UserProfileUpdate {
+  name?: string;
+  university?: string;
+  degree?: string;
+  branch?: string;
+  graduation_year?: number;
+  current_year?: number;
+  cgpa?: number;
+  preferred_opportunity_types?: string[];
+  preferred_work_modes?: string[];
+  preferred_locations?: string[];
 }
 
 /** Response received upon successful registration or login. */

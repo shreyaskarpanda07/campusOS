@@ -64,6 +64,9 @@ export default function HomePage() {
               {currentUser.name} ({currentUser.email})
             </p>
             <div className="flex justify-center gap-3">
+              <Link href="/profile">
+                <Button variant="primary">Manage Profile & Skills</Button>
+              </Link>
               <Button
                 variant="outline"
                 onClick={handleLogout}
@@ -134,7 +137,7 @@ export default function HomePage() {
 
       {/* ── Footer hint ───────────────────────────────────────── */}
       <p className="mt-8 text-sm text-gray-400">
-        CampusOS — Phase 2 Authentication Ready
+        CampusOS — Phase 3 Profile & Preferences Ready
       </p>
     </main>
   );

@@ -5,8 +5,9 @@ Represents a student or admin user profile in CampusOS.
 """
 
 from sqlalchemy import Boolean, Column, Integer, Numeric, String, JSON
-from sqlalchemy.dialects.postgresql import JSONB, UUID as PG_UUID
+from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import Uuid
+from sqlalchemy.orm import relationship
 
 from app.db.base import Base, TimestampMixin, generate_uuid
 
@@ -72,6 +73,11 @@ class User(Base, TimestampMixin):
         default=list,
         nullable=False,
     )
+    preferred_locations = Column(
+        JsonType,
+        default=list,
+        nullable=False,
+    )
     is_admin = Column(
         Boolean,
         default=False,
@@ -81,4 +87,18 @@ class User(Base, TimestampMixin):
         Boolean,
         default=True,
         nullable=False,
+    )
+
+    # Relationships
+    skills = relationship(
+        "UserSkill",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin",
+    )
+    interests = relationship(
+        "UserInterest",
+        back_populates="user",
+        cascade="all, delete-orphan",
+        lazy="selectin",
     )

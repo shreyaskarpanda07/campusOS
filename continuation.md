@@ -7,38 +7,38 @@ CampusOS is an opportunity intelligence platform for university students built a
 
 ---
 
-## Current Status: Phase 3 (User Profile & Preferences) Complete
+## Current Status: Phase 4 (Opportunity CRUD & Discovery) Complete
 
-The platform now provides comprehensive student profile and preference management (FR-01) with database persistence, canonical skill and interest mapping, and responsive UI.
+The platform now features complete opportunity management, database models, provenance tracking, seeding, full-text search, multi-faceted filtering, and a responsive discovery UI.
 
-### What Was Built in Phase 3:
-1. **SQLAlchemy Models** (`backend/app/models/`):
-   - `Skill` (`skills` table) with unique name index.
-   - `UserSkill` (`user_skills` junction table) with proficiency rating.
-   - `Interest` (`interests` table) with unique name index.
-   - `UserInterest` (`user_interests` junction table).
-   - `User` model extended with `preferred_locations` and relationships to skills and interests.
-2. **Alembic Migration** (`backend/migrations/versions/002_create_profile_tables.py`):
-   - Creates `skills`, `user_skills`, `interests`, `user_interests` tables and adds `preferred_locations` JSON column to `users`.
-3. **Pydantic Schemas** (`backend/app/schemas/user.py`):
-   - `UserProfileResponse`, `UserProfileUpdateRequest`, `SkillItem`, `SkillRead`, `UserSkillsUpdateRequest`, `InterestItem`, `InterestRead`, `UserInterestsUpdateRequest`.
-4. **User Service Layer** (`backend/app/services/user.py`):
-   - `get_profile`: Aggregates user academic data, skills with proficiency, and interests into a clean schema.
-   - `update_profile`: Updates academic background (university, degree, branch, year, CGPA) and multi-select preferences (types, work modes, locations).
-   - `sync_skills`: Canonicalizes skill names, prevents duplicates, and links to user.
-   - `sync_interests`: Canonicalizes interest names, prevents duplicates, and links to user.
-5. **Profile Router** (`backend/app/routers/users.py`):
-   - `GET /api/users/me` — Read current authenticated profile.
-   - `PATCH /api/users/me` — Update academic details and preferences.
-   - `PUT /api/users/me/skills` — Synchronize skills and proficiency levels.
-   - `PUT /api/users/me/interests` — Synchronize career interests.
-6. **Backend Tests** (`backend/tests/test_users.py`):
-   - 7 unit and integration tests covering GET/PATCH/PUT, boundary validation (CGPA <= 10.0), and strict user data isolation.
-7. **Frontend Profile & Tag Input** (`frontend/`):
-   - `TagInput.tsx` reusable component supporting tag pills, removal, and optional skill proficiency selector.
-   - `/profile` page supporting full academic background editing, opportunity type toggles, work mode toggles, location tags, skill tags, and interest tags.
-   - Updated `page.tsx` with direct link to profile management when signed in.
-   - 4 Vitest tests covering profile API client methods (`frontend/__tests__/profile.test.ts`).
+### What Was Built in Phase 4:
+1. **Opportunity & Source SQLAlchemy Models** (`backend/app/models/`):
+   - `Opportunity`: Stores structured records (title, organization, type, description, deadlines, locations, work modes, CGPA, eligibility JSON, compensation, URL, status, confidence).
+   - `OpportunitySkill`: Junction table linking required and preferred skills to opportunities.
+   - `Source`: Ingestion source registry (name, base URL, source type).
+   - `OpportunitySource`: Preserves source provenance and origin URL for every opportunity.
+2. **Alembic Migration** (`backend/migrations/versions/003_create_opportunity_tables.py`):
+   - Creates `opportunities`, `sources`, `opportunity_skills`, and `opportunity_sources` tables with appropriate indexes on organization, type, deadline, and status.
+3. **Pydantic Schemas** (`backend/app/schemas/opportunity.py`):
+   - `OpportunityCreateRequest`, `OpportunityRead`, `OpportunityDetail`, `OpportunitySkillItem`, `OpportunitySkillRead`, `OpportunitySourceRead`, `OpportunityListResponse`, `PaginationMeta`.
+4. **Opportunity Service Layer** (`backend/app/services/opportunity.py`):
+   - `create_opportunity`: Admin opportunity creation with automatic skill canonicalization and source provenance linking. Guarantees unknown fields remain null (FR-03).
+   - `get_opportunity_by_id`: Comprehensive detail retrieval with skills and sources.
+   - `list_opportunities`: Multi-parameter search across title, organization, description, with type, work mode, location, and CGPA filtering, ordered by urgency (deadline ascending).
+5. **Opportunity API Router** (`backend/app/routers/opportunities.py`):
+   - `GET /api/opportunities` — search, filter, and paginate.
+   - `GET /api/opportunities/{id}` — detailed view.
+   - `POST /api/opportunities` — administrator-only creation endpoint.
+6. **Realistic Database Seeding Script** (`backend/scripts/seed_opportunities.py`):
+   - Seeds Google, Microsoft Research, Stripe, Deloitte, HackMIT, and GSoC opportunities across internships, hackathons, competitions, fellowships, and scholarships.
+7. **Backend Opportunity Tests** (`backend/tests/test_opportunities.py`):
+   - 5 unit and integration tests covering admin creation protection (403 for students, 401 for anonymous), detail lookup (200 & 404), multi-faceted filtering, and pagination.
+8. **Frontend Discovery UI & Components** (`frontend/`):
+   - `OpportunityCard.tsx`: Displays category badge, deadline urgency countdown, title, organization, work mode, location, compensation, skills pills, and direct apply link.
+   - `/discover` page: Features keyword search, category filter pills (Internships, Hackathons, Competitions, etc.), work mode dropdown, result counters, grid layout, and pagination.
+   - `/opportunities/[id]` page: Detailed view showing full overview, required vs. preferred skills breakdown, academic eligibility criteria, and source provenance.
+   - Updated `page.tsx` home screen with direct button to Discover Opportunities.
+   - 3 Vitest tests covering opportunity search and detail API methods (`frontend/__tests__/opportunities.test.ts`).
 
 ---
 
@@ -70,6 +70,9 @@ pip install -r requirements.txt
 # Run migrations to latest version
 alembic upgrade head
 
+# Seed sample opportunities
+python scripts/seed_opportunities.py
+
 # Start FastAPI server
 uvicorn app.main:app --reload --port 8000
 ```
@@ -81,11 +84,12 @@ In `backend/`:
 ```bash
 pytest -v
 ```
-All **23 tests** will pass:
+All **28 tests** will pass:
 - 4 Health check tests (`tests/test_health.py`)
 - 2 Config loading tests (`tests/test_config.py`)
 - 10 Auth & security tests (`tests/test_auth.py`)
 - 7 Profile & preferences tests (`tests/test_users.py`)
+- 5 Opportunity CRUD & discovery tests (`tests/test_opportunities.py`)
 
 ### 4. Frontend Setup
 In a new terminal:
@@ -99,8 +103,7 @@ npm install
 npm run dev
 ```
 - Web Application: [http://localhost:3000](http://localhost:3000)
-- Sign In: [http://localhost:3000/login](http://localhost:3000/login)
-- Sign Up: [http://localhost:3000/signup](http://localhost:3000/signup)
+- Discover Opportunities: [http://localhost:3000/discover](http://localhost:3000/discover)
 - Student Profile: [http://localhost:3000/profile](http://localhost:3000/profile)
 
 ### 5. Run Frontend Tests
@@ -108,27 +111,26 @@ In `frontend/`:
 ```bash
 npm test
 ```
-All **12 tests** will pass:
+All **15 tests** will pass:
 - 3 API client & health check tests (`__tests__/api.test.ts`)
 - 5 Auth storage & authentication tests (`__tests__/auth.test.ts`)
 - 4 Profile management API tests (`__tests__/profile.test.ts`)
+- 3 Opportunity search & detail tests (`__tests__/opportunities.test.ts`)
 
 ---
 
-## Next Step: Phase 4 — Opportunity CRUD & Discovery
+## Next Step: Phase 5 — Deterministic Eligibility Engine
 
-The next milestone is implementing opportunity data models and discovery APIs (FR-02, FR-03, FR-07):
-1. Create `Opportunity`, `OpportunitySkill`, `Source`, `OpportunitySource` SQLAlchemy models.
-2. Generate Alembic migration `003_create_opportunity_tables`.
-3. Create Pydantic schemas for Opportunity create, detail, list query filters, and pagination.
-4. Implement `OpportunityService`:
-   - Admin opportunity creation with skill requirements and source provenance.
-   - Filterable opportunity discovery (`type`, `work_mode`, `location`, `organization`, `search`, `min_cgpa`).
-   - Opportunity detail retrieval by ID.
-5. Create Opportunity Router (`backend/app/routers/opportunities.py`):
-   - `GET /api/opportunities` — search, filter, paginate
-   - `GET /api/opportunities/{id}` — single opportunity detail
-   - `POST /api/opportunities` — admin-only opportunity creation
-6. Create database seeding script (`backend/scripts/seed_opportunities.py`) with realistic sample opportunities (internships, hackathons, case competitions, fellowships).
-7. Create Discover page (`/discover`) with search bar, filter sidebar, and opportunity cards.
-8. Add unit and integration tests for opportunity CRUD, search, and filtering.
+The next milestone is implementing the deterministic eligibility evaluation engine (PRD FR-04):
+1. Create `backend/app/services/eligibility.py`:
+   - Evaluates hard constraints before recommendation ranking:
+     - Graduation year match
+     - Current year match
+     - Degree / Branch match
+     - Minimum CGPA threshold
+     - Geographic / location eligibility
+   - Returns tri-state result: `eligible`, `ineligible`, or `uncertain`
+   - Generates transparent, human-readable reasons (e.g. "Eligible: Meets minimum CGPA (8.5 >= 7.5) and graduation year 2027").
+2. Integrate eligibility evaluation into `OpportunityRead` / detail payload for authenticated student requests.
+3. Show eligibility status badges (`✓ Eligible`, `✕ Ineligible`, `? Uncertain`) directly on `OpportunityCard` and detail page.
+4. Add unit tests for all eligibility boundary cases (missing fields, edge year ranges, branch synonyms, CGPA cutoffs).

@@ -72,6 +72,13 @@ export interface OpportunitySource {
   fetched_at: string;
 }
 
+/** Deterministic Eligibility Evaluation result */
+export interface EligibilityEvaluation {
+  status: "eligible" | "ineligible" | "uncertain";
+  reasons: string[];
+  missing_data: string[];
+}
+
 /** Opportunity model */
 export interface Opportunity {
   id: string;
@@ -90,15 +97,16 @@ export interface Opportunity {
   status: string;
   skills: OpportunitySkill[];
   sources?: OpportunitySource[];
+  eligibility_evaluation?: EligibilityEvaluation | null;
   created_at: string;
   updated_at?: string;
 }
 
 export interface PaginationMeta {
-  total: int;
-  page: int;
-  per_page: int;
-  pages: int;
+  total: number;
+  page: number;
+  per_page: number;
+  pages: number;
 }
 
 export interface OpportunityListResponse {

@@ -38,16 +38,38 @@ export const OpportunityCard: React.FC<OpportunityCardProps> = ({ opportunity })
     }
   }
 
+  const elig = opportunity.eligibility_evaluation;
+
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col justify-between">
       <div>
-        {/* ── Type & Urgency Bar ── */}
-        <div className="flex items-center justify-between gap-2 mb-2">
-          <span
-            className={`capitalize px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeColor}`}
-          >
-            {opportunity.type}
-          </span>
+        {/* ── Type, Urgency, & Eligibility Bar ── */}
+        <div className="flex flex-wrap items-center justify-between gap-1.5 mb-2">
+          <div className="flex items-center gap-1.5">
+            <span
+              className={`capitalize px-2.5 py-0.5 rounded-full text-xs font-semibold border ${badgeColor}`}
+            >
+              {opportunity.type}
+            </span>
+
+            {/* Eligibility Badge */}
+            {elig && (
+              <span
+                className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
+                  elig.status === "eligible"
+                    ? "bg-green-50 text-green-700 border-green-200"
+                    : elig.status === "ineligible"
+                    ? "bg-red-50 text-red-700 border-red-200"
+                    : "bg-amber-50 text-amber-700 border-amber-200"
+                }`}
+                title={elig.reasons.join(" • ")}
+              >
+                {elig.status === "eligible" && "✓ Eligible"}
+                {elig.status === "ineligible" && "✕ Ineligible"}
+                {elig.status === "uncertain" && "? Needs Info"}
+              </span>
+            )}
+          </div>
 
           {deadlineText && (
             <span className="text-xs font-medium text-amber-700 bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200">

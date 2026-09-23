@@ -211,11 +211,65 @@ export default function OpportunityDetailPage() {
           <div className="space-y-6">
             {/* Academic Eligibility */}
             <div className="bg-white rounded-xl border border-gray-200 p-6 shadow-sm space-y-4">
-              <h2 className="text-base font-bold text-gray-900 border-b border-gray-100 pb-2">
-                Eligibility Criteria
-              </h2>
+              <div className="flex items-center justify-between border-b border-gray-100 pb-2">
+                <h2 className="text-base font-bold text-gray-900">
+                  Eligibility Criteria
+                </h2>
 
-              <div className="space-y-3 text-xs">
+                {opp.eligibility_evaluation && (
+                  <span
+                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                      opp.eligibility_evaluation.status === "eligible"
+                        ? "bg-green-50 text-green-700 border-green-200"
+                        : opp.eligibility_evaluation.status === "ineligible"
+                        ? "bg-red-50 text-red-700 border-red-200"
+                        : "bg-amber-50 text-amber-700 border-amber-200"
+                    }`}
+                  >
+                    {opp.eligibility_evaluation.status === "eligible" && "✓ Eligible"}
+                    {opp.eligibility_evaluation.status === "ineligible" && "✕ Ineligible"}
+                    {opp.eligibility_evaluation.status === "uncertain" && "? Needs Info"}
+                  </span>
+                )}
+              </div>
+
+              {/* Evaluated Reasons */}
+              {opp.eligibility_evaluation && opp.eligibility_evaluation.reasons.length > 0 && (
+                <div className="space-y-1.5 pt-1">
+                  <span className="text-[11px] font-semibold uppercase tracking-wider text-gray-400 block">
+                    Your Match Evaluation:
+                  </span>
+                  <ul className="space-y-1 text-xs text-gray-600">
+                    {opp.eligibility_evaluation.reasons.map((r, idx) => (
+                      <li key={idx} className="flex items-start gap-1.5">
+                        <span className="text-primary-600 mt-0.5">•</span>
+                        <span>{r}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {/* Missing Data Warning */}
+              {opp.eligibility_evaluation &&
+                opp.eligibility_evaluation.missing_data.length > 0 && (
+                  <div className="rounded-lg bg-amber-50 p-3 border border-amber-200 text-xs text-amber-800 space-y-1">
+                    <p className="font-semibold">Missing Profile Info:</p>
+                    <ul className="list-disc list-inside space-y-0.5 text-[11px]">
+                      {opp.eligibility_evaluation.missing_data.map((m, idx) => (
+                        <li key={idx}>{m}</li>
+                      ))}
+                    </ul>
+                    <Link
+                      href="/profile"
+                      className="inline-block mt-2 font-medium text-amber-900 underline text-xs"
+                    >
+                      Update your academic profile &rarr;
+                    </Link>
+                  </div>
+                )}
+
+              <div className="space-y-3 text-xs pt-2 border-t border-gray-100">
                 <div>
                   <span className="text-gray-400 block">Minimum CGPA:</span>
                   <span className="font-semibold text-gray-800">

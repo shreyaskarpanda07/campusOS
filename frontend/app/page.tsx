@@ -63,9 +63,12 @@ export default function HomePage() {
             <p className="text-base font-semibold text-gray-900 mb-4">
               {currentUser.name} ({currentUser.email})
             </p>
-            <div className="flex justify-center gap-3">
+            <div className="flex flex-wrap justify-center gap-3">
+              <Link href="/discover">
+                <Button variant="primary">Discover Opportunities</Button>
+              </Link>
               <Link href="/profile">
-                <Button variant="primary">Manage Profile & Skills</Button>
+                <Button variant="secondary">My Profile & Skills</Button>
               </Link>
               <Button
                 variant="outline"
@@ -137,7 +140,7 @@ export default function HomePage() {
 
       {/* ── Footer hint ───────────────────────────────────────── */}
       <p className="mt-8 text-sm text-gray-400">
-        CampusOS — Phase 3 Profile & Preferences Ready
+        CampusOS — Phase 4 Opportunity Discovery Ready
       </p>
     </main>
   );

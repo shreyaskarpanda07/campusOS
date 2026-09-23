@@ -57,6 +57,72 @@ export interface AuthResponseData {
   token_type: string;
 }
 
+/** Opportunity skill specification */
+export interface OpportunitySkill {
+  id: string;
+  name: string;
+  requirement_type: "required" | "preferred";
+}
+
+/** Source provenance representation */
+export interface OpportunitySource {
+  source_id: string;
+  source_name: string;
+  source_url?: string | null;
+  fetched_at: string;
+}
+
+/** Opportunity model */
+export interface Opportunity {
+  id: string;
+  title: string;
+  organization: string;
+  type: string;
+  description?: string | null;
+  deadline?: string | null;
+  start_date?: string | null;
+  location?: string | null;
+  work_mode?: string | null;
+  minimum_cgpa?: number | null;
+  eligibility: Record<string, any>;
+  compensation?: string | null;
+  application_url?: string | null;
+  status: string;
+  skills: OpportunitySkill[];
+  sources?: OpportunitySource[];
+  created_at: string;
+  updated_at?: string;
+}
+
+export interface PaginationMeta {
+  total: int;
+  page: int;
+  per_page: int;
+  pages: int;
+}
+
+export interface OpportunityListResponse {
+  items: Opportunity[];
+  pagination: {
+    total: number;
+    page: number;
+    per_page: number;
+    pages: number;
+  };
+}
+
+export interface OpportunityFilterParams {
+  type?: string;
+  work_mode?: string;
+  location?: string;
+  organization?: string;
+  search?: string;
+  status?: string;
+  max_cgpa?: number;
+  page?: number;
+  per_page?: number;
+}
+
 /** Opportunity types supported by the platform. */
 export type OpportunityType =
   | "internship"

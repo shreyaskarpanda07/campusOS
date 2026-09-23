@@ -187,3 +187,36 @@ export async function updateMyInterests(
     body: JSON.stringify({ interests }),
   });
 }
+
+/**
+ * Search and filter opportunities feed.
+ */
+export async function fetchOpportunities(
+  params: import("./types").OpportunityFilterParams = {}
+): Promise<import("./types").OpportunityListResponse> {
+  const searchParams = new URLSearchParams();
+  if (params.type) searchParams.set("type", params.type);
+  if (params.work_mode) searchParams.set("work_mode", params.work_mode);
+  if (params.location) searchParams.set("location", params.location);
+  if (params.organization) searchParams.set("organization", params.organization);
+  if (params.search) searchParams.set("search", params.search);
+  if (params.status) searchParams.set("status", params.status);
+  if (params.max_cgpa !== undefined && params.max_cgpa !== null) {
+    searchParams.set("max_cgpa", String(params.max_cgpa));
+  }
+  if (params.page) searchParams.set("page", String(params.page));
+  if (params.per_page) searchParams.set("per_page", String(params.per_page));
+
+  const queryStr = searchParams.toString();
+  const endpoint = `/opportunities${queryStr ? `?${queryStr}` : ""}`;
+  return authFetch<import("./types").OpportunityListResponse>(endpoint);
+}
+
+/**
+ * Fetch full opportunity details by ID.
+ */
+export async function fetchOpportunityDetail(
+  id: string
+): Promise<import("./types").Opportunity> {
+  return authFetch<import("./types").Opportunity>(`/opportunities/${id}`);
+}

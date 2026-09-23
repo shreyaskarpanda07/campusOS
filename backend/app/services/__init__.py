@@ -1,5 +1,6 @@
 # Services module — business logic layer
 from app.services.auth import AuthService, auth_service
+from app.services.eligibility import EligibilityEngine, EligibilityResult, eligibility_engine
 from app.services.opportunity import OpportunityService, opportunity_service
 from app.services.user import UserService, user_service
 
@@ -10,4 +11,7 @@ __all__ = [
     "user_service",
     "OpportunityService",
     "opportunity_service",
+    "EligibilityEngine",
+    "EligibilityResult",
+    "eligibility_engine",
 ]

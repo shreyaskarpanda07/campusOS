@@ -9,6 +9,14 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field
 
 
+class EligibilityRead(BaseModel):
+    """Result of deterministic eligibility evaluation."""
+
+    status: str  # eligible, ineligible, uncertain
+    reasons: List[str] = Field(default_factory=list)
+    missing_data: List[str] = Field(default_factory=list)
+
+
 class OpportunitySkillItem(BaseModel):
     """Skill specification for opportunity creation."""
 
@@ -77,6 +85,7 @@ class OpportunityRead(BaseModel):
     application_url: Optional[str] = None
     status: str
     skills: List[OpportunitySkillRead] = Field(default_factory=list)
+    eligibility_evaluation: Optional[EligibilityRead] = None
     created_at: datetime
 
     model_config = ConfigDict(from_attributes=True)

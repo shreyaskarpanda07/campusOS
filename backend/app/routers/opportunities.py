@@ -63,6 +63,7 @@ def list_opportunities(
         max_cgpa=max_cgpa,
         page=page,
         per_page=per_page,
+        student=current_user,
     )
     return ApiResponse(
         data=res.model_dump(mode="json"),
@@ -83,7 +84,7 @@ def get_opportunity(
     """
     Retrieve full opportunity details including required skills and source provenance.
     """
-    opp = opportunity_service.get_opportunity_by_id(db, id)
+    opp = opportunity_service.get_opportunity_by_id(db, id, student=current_user)
     if not opp:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

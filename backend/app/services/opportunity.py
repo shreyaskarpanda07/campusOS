@@ -5,6 +5,7 @@ Provides:
 - Opportunity creation with skill linking and source provenance
 - Filtered search and pagination
 - Detail retrieval
+- Automated deterministic eligibility evaluation for authenticated students
 """
 
 import math
@@ -18,7 +19,9 @@ from sqlalchemy.orm import Session
 from app.models.opportunity import Opportunity, OpportunitySkill
 from app.models.skill import Skill
 from app.models.source import OpportunitySource, Source
+from app.models.user import User
 from app.schemas.opportunity import (
+    EligibilityRead,
     OpportunityCreateRequest,
     OpportunityDetail,
     OpportunityListResponse,
@@ -27,6 +30,7 @@ from app.schemas.opportunity import (
     OpportunitySourceRead,
     PaginationMeta,
 )
+from app.services.eligibility import eligibility_engine
 
 
 class OpportunityService:
@@ -149,9 +153,12 @@ class OpportunityService:
 
     @classmethod
     def get_opportunity_by_id(
-        cls, db: Session, opp_id: UUID
+        cls,
+        db: Session,
+        opp_id: UUID,
+        student: Optional[User] = None,
     ) -> Optional[OpportunityDetail]:
-        """Fetch a single opportunity with attached skills and source provenance."""
+        """Fetch a single opportunity with attached skills, sources, and evaluated eligibility."""
         stmt = select(Opportunity).where(Opportunity.id == opp_id)
         opp = db.scalars(stmt).first()
         if not opp:
@@ -178,6 +185,16 @@ class OpportunityService:
             for src in opp.sources
         ]
 
+        # Evaluate eligibility if student provided
+        eligibility_eval: Optional[EligibilityRead] = None
+        if student:
+            eval_res = eligibility_engine.evaluate(student, opp)
+            eligibility_eval = EligibilityRead(
+                status=eval_res.status,
+                reasons=eval_res.reasons,
+                missing_data=eval_res.missing_data,
+            )
+
         return OpportunityDetail(
             id=opp.id,
             title=opp.title,
@@ -195,6 +212,7 @@ class OpportunityService:
             status=opp.status,
             skills=skills,
             sources=sources,
+            eligibility_evaluation=eligibility_eval,
             created_at=opp.created_at,
             updated_at=opp.updated_at,
         )
@@ -212,9 +230,10 @@ class OpportunityService:
         max_cgpa: Optional[float] = None,
         page: int = 1,
         per_page: int = 20,
+        student: Optional[User] = None,
     ) -> OpportunityListResponse:
         """
-        Search and filter opportunities with pagination.
+        Search and filter opportunities with pagination and per-opportunity eligibility calculation.
         """
         page = max(1, page)
         per_page = max(1, min(100, per_page))
@@ -264,34 +283,45 @@ class OpportunityService:
 
         opps = db.scalars(query).all()
 
-        items = [
-            OpportunityRead(
-                id=o.id,
-                title=o.title,
-                organization=o.organization,
-                type=o.type,
-                description=o.description,
-                deadline=o.deadline,
-                start_date=o.start_date,
-                location=o.location,
-                work_mode=o.work_mode,
-                minimum_cgpa=float(o.minimum_cgpa) if o.minimum_cgpa is not None else None,
-                eligibility=o.eligibility or {},
-                compensation=o.compensation,
-                application_url=o.application_url,
-                status=o.status,
-                skills=[
-                    OpportunitySkillRead(
-                        id=os.skill.id,
-                        name=os.skill.name,
-                        requirement_type=os.requirement_type,
-                    )
-                    for os in o.skills
-                ],
-                created_at=o.created_at,
+        items: List[OpportunityRead] = []
+        for o in opps:
+            eligibility_eval: Optional[EligibilityRead] = None
+            if student:
+                eval_res = eligibility_engine.evaluate(student, o)
+                eligibility_eval = EligibilityRead(
+                    status=eval_res.status,
+                    reasons=eval_res.reasons,
+                    missing_data=eval_res.missing_data,
+                )
+
+            items.append(
+                OpportunityRead(
+                    id=o.id,
+                    title=o.title,
+                    organization=o.organization,
+                    type=o.type,
+                    description=o.description,
+                    deadline=o.deadline,
+                    start_date=o.start_date,
+                    location=o.location,
+                    work_mode=o.work_mode,
+                    minimum_cgpa=float(o.minimum_cgpa) if o.minimum_cgpa is not None else None,
+                    eligibility=o.eligibility or {},
+                    compensation=o.compensation,
+                    application_url=o.application_url,
+                    status=o.status,
+                    skills=[
+                        OpportunitySkillRead(
+                            id=os.skill.id,
+                            name=os.skill.name,
+                            requirement_type=os.requirement_type,
+                        )
+                        for os in o.skills
+                    ],
+                    eligibility_evaluation=eligibility_eval,
+                    created_at=o.created_at,
+                )
             )
-            for o in opps
-        ]
 
         pages = math.ceil(total / per_page) if total > 0 else 0
 

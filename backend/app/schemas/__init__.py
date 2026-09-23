@@ -1,6 +1,7 @@
 # Schemas module — Pydantic request/response models
 from app.schemas.common import ApiResponse, ErrorDetail
 from app.schemas.opportunity import (
+    EligibilityRead,
     OpportunityCreateRequest,
     OpportunityDetail,
     OpportunityListResponse,
@@ -52,4 +53,5 @@ __all__ = [
     "OpportunitySourceRead",
     "OpportunityListResponse",
     "PaginationMeta",
+    "EligibilityRead",
 ]

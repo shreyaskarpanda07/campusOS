@@ -127,6 +127,10 @@ class OpportunityService:
                 )
             )
 
+        # Generate vector embedding for semantic search
+        from app.services.embedding import embedding_service
+        opp.embedding = embedding_service.embed_opportunity(opp)
+
         db.commit()
         db.refresh(opp)
 

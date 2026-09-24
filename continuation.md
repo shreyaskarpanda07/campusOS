@@ -7,38 +7,32 @@ CampusOS is an opportunity intelligence platform for university students built a
 
 ---
 
-## Current Status: Phase 4 (Opportunity CRUD & Discovery) Complete
+## Current Status: Phase 5 (Deterministic Eligibility Engine) Complete
 
-The platform now features complete opportunity management, database models, provenance tracking, seeding, full-text search, multi-faceted filtering, and a responsive discovery UI.
+The platform now features a deterministic, rule-based qualification checker (PRD FR-04) that evaluates hard academic constraints before recommendation ranking, producing transparent, human-readable explanations.
 
-### What Was Built in Phase 4:
-1. **Opportunity & Source SQLAlchemy Models** (`backend/app/models/`):
-   - `Opportunity`: Stores structured records (title, organization, type, description, deadlines, locations, work modes, CGPA, eligibility JSON, compensation, URL, status, confidence).
-   - `OpportunitySkill`: Junction table linking required and preferred skills to opportunities.
-   - `Source`: Ingestion source registry (name, base URL, source type).
-   - `OpportunitySource`: Preserves source provenance and origin URL for every opportunity.
-2. **Alembic Migration** (`backend/migrations/versions/003_create_opportunity_tables.py`):
-   - Creates `opportunities`, `sources`, `opportunity_skills`, and `opportunity_sources` tables with appropriate indexes on organization, type, deadline, and status.
-3. **Pydantic Schemas** (`backend/app/schemas/opportunity.py`):
-   - `OpportunityCreateRequest`, `OpportunityRead`, `OpportunityDetail`, `OpportunitySkillItem`, `OpportunitySkillRead`, `OpportunitySourceRead`, `OpportunityListResponse`, `PaginationMeta`.
-4. **Opportunity Service Layer** (`backend/app/services/opportunity.py`):
-   - `create_opportunity`: Admin opportunity creation with automatic skill canonicalization and source provenance linking. Guarantees unknown fields remain null (FR-03).
-   - `get_opportunity_by_id`: Comprehensive detail retrieval with skills and sources.
-   - `list_opportunities`: Multi-parameter search across title, organization, description, with type, work mode, location, and CGPA filtering, ordered by urgency (deadline ascending).
-5. **Opportunity API Router** (`backend/app/routers/opportunities.py`):
-   - `GET /api/opportunities` — search, filter, and paginate.
-   - `GET /api/opportunities/{id}` — detailed view.
-   - `POST /api/opportunities` — administrator-only creation endpoint.
-6. **Realistic Database Seeding Script** (`backend/scripts/seed_opportunities.py`):
-   - Seeds Google, Microsoft Research, Stripe, Deloitte, HackMIT, and GSoC opportunities across internships, hackathons, competitions, fellowships, and scholarships.
-7. **Backend Opportunity Tests** (`backend/tests/test_opportunities.py`):
-   - 5 unit and integration tests covering admin creation protection (403 for students, 401 for anonymous), detail lookup (200 & 404), multi-faceted filtering, and pagination.
-8. **Frontend Discovery UI & Components** (`frontend/`):
-   - `OpportunityCard.tsx`: Displays category badge, deadline urgency countdown, title, organization, work mode, location, compensation, skills pills, and direct apply link.
-   - `/discover` page: Features keyword search, category filter pills (Internships, Hackathons, Competitions, etc.), work mode dropdown, result counters, grid layout, and pagination.
-   - `/opportunities/[id]` page: Detailed view showing full overview, required vs. preferred skills breakdown, academic eligibility criteria, and source provenance.
-   - Updated `page.tsx` home screen with direct button to Discover Opportunities.
-   - 3 Vitest tests covering opportunity search and detail API methods (`frontend/__tests__/opportunities.test.ts`).
+### What Was Built in Phase 5:
+1. **Eligibility Engine Service** (`backend/app/services/eligibility.py`):
+   - Tri-state qualification decision:
+     - `eligible`: All known qualification criteria satisfied
+     - `ineligible`: One or more hard qualification rules failed (e.g. CGPA cutoff, graduation year, degree, branch)
+     - `uncertain`: Missing required student profile data or opportunity criteria
+   - Evaluates:
+     - Minimum CGPA thresholds with numeric comparison
+     - Graduation year batch matching
+     - Current year of study matching
+     - Degree level matching (e.g., B.Tech, B.S., M.S.)
+     - Branch / discipline matching with synonym normalization (e.g. "Computer Science & Engineering" matches "Computer Science")
+   - Generates human-readable explanations for every evaluated requirement.
+2. **Opportunity API Integration** (`backend/app/schemas/opportunity.py`, `backend/app/services/opportunity.py`, `backend/app/routers/opportunities.py`):
+   - Attached `eligibility_evaluation` (status, reasons, missing data) to `OpportunityRead` in list responses and `OpportunityDetail` in detail responses.
+   - Automatically resolves authenticated student context from `current_user` to provide real-time eligibility evaluation on all feeds.
+3. **Automated Backend Tests** (`backend/tests/test_eligibility.py`):
+   - 9 comprehensive unit and integration tests covering fully qualified students, CGPA cutoff rejections, graduation batch mismatches, discipline mismatches and synonym matches, uncertain results on missing profile fields, and full API integration. Total backend tests: **37 passing**.
+4. **Frontend Eligibility Badges & Detailed Breakdown** (`frontend/`):
+   - `OpportunityCard.tsx`: Displays real-time status pills (`✓ Eligible`, `✕ Ineligible`, `? Needs Info`) with tooltip reasons.
+   - `/opportunities/[id]` page: Features dedicated eligibility breakdown card showing passed/failed bullet points and callouts for missing profile information with direct link to `/profile`.
+   - 3 Vitest tests verifying badge rendering for all three status states (`frontend/__tests__/eligibility.test.ts`). Total frontend tests: **18 passing**.
 
 ---
 
@@ -84,12 +78,13 @@ In `backend/`:
 ```bash
 pytest -v
 ```
-All **28 tests** will pass:
+All **37 tests** will pass:
 - 4 Health check tests (`tests/test_health.py`)
 - 2 Config loading tests (`tests/test_config.py`)
 - 10 Auth & security tests (`tests/test_auth.py`)
 - 7 Profile & preferences tests (`tests/test_users.py`)
 - 5 Opportunity CRUD & discovery tests (`tests/test_opportunities.py`)
+- 9 Deterministic eligibility engine tests (`tests/test_eligibility.py`)
 
 ### 4. Frontend Setup
 In a new terminal:
@@ -111,26 +106,24 @@ In `frontend/`:
 ```bash
 npm test
 ```
-All **15 tests** will pass:
+All **18 tests** will pass:
 - 3 API client & health check tests (`__tests__/api.test.ts`)
 - 5 Auth storage & authentication tests (`__tests__/auth.test.ts`)
 - 4 Profile management API tests (`__tests__/profile.test.ts`)
 - 3 Opportunity search & detail tests (`__tests__/opportunities.test.ts`)
+- 3 Eligibility badge rendering tests (`__tests__/eligibility.test.ts`)
 
 ---
 
-## Next Step: Phase 5 — Deterministic Eligibility Engine
+## Next Step: Phase 6 — Embeddings & Vector Search Foundation
 
-The next milestone is implementing the deterministic eligibility evaluation engine (PRD FR-04):
-1. Create `backend/app/services/eligibility.py`:
-   - Evaluates hard constraints before recommendation ranking:
-     - Graduation year match
-     - Current year match
-     - Degree / Branch match
-     - Minimum CGPA threshold
-     - Geographic / location eligibility
-   - Returns tri-state result: `eligible`, `ineligible`, or `uncertain`
-   - Generates transparent, human-readable reasons (e.g. "Eligible: Meets minimum CGPA (8.5 >= 7.5) and graduation year 2027").
-2. Integrate eligibility evaluation into `OpportunityRead` / detail payload for authenticated student requests.
-3. Show eligibility status badges (`✓ Eligible`, `✕ Ineligible`, `? Uncertain`) directly on `OpportunityCard` and detail page.
-4. Add unit tests for all eligibility boundary cases (missing fields, edge year ranges, branch synonyms, CGPA cutoffs).
+The next milestone introduces semantic similarity matching using vector embeddings (PRD FR-05, TECH_STACK §4):
+1. Configure `pgvector` extension in PostgreSQL migration `004_add_vector_embeddings`.
+2. Add `embedding` vector column (1536 dimensions) to `opportunities` and `users` (or a dedicated profile embedding model).
+3. Create `backend/app/services/embedding.py`:
+   - Text representation builder for opportunities (`title + organization + description + skills`).
+   - Text representation builder for user profiles (`degree + branch + skills + interests + preferred opportunity types`).
+   - Mock/Ollama/OpenAI embedding generator interface with graceful fallback.
+4. Implement vector indexing: HNSW index on opportunity embedding column.
+5. Create opportunity embedding backfill script (`scripts/generate_embeddings.py`).
+6. Write unit tests for embedding text serialization, dimension validation, and vector cosine similarity queries.

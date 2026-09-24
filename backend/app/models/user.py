@@ -8,11 +8,14 @@ from sqlalchemy import Boolean, Column, Integer, Numeric, String, JSON
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import Uuid
 from sqlalchemy.orm import relationship
+from pgvector.sqlalchemy import Vector
 
 from app.db.base import Base, TimestampMixin, generate_uuid
 
 # Support JSONB on PostgreSQL with JSON fallback on SQLite
 JsonType = JSONB().with_variant(JSON(), "sqlite")
+# Support pgvector on PostgreSQL with JSON fallback on SQLite
+VectorType = Vector(1536).with_variant(JSON(), "sqlite")
 
 
 class User(Base, TimestampMixin):
@@ -87,6 +90,10 @@ class User(Base, TimestampMixin):
         Boolean,
         default=True,
         nullable=False,
+    )
+    embedding = Column(
+        VectorType,
+        nullable=True,
     )
 
     # Relationships

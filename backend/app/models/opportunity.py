@@ -17,11 +17,14 @@ from sqlalchemy import (
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy import Uuid
 from sqlalchemy.orm import relationship
+from pgvector.sqlalchemy import Vector
 
 from app.db.base import Base, TimestampMixin, generate_uuid
 
 # Cross-database JSON support (Postgres JSONB with SQLite JSON fallback)
 JsonType = JSONB().with_variant(JSON(), "sqlite")
+# Cross-database Vector support (pgvector on Postgres with SQLite JSON fallback)
+VectorType = Vector(1536).with_variant(JSON(), "sqlite")
 
 
 class Opportunity(Base, TimestampMixin):
@@ -94,6 +97,10 @@ class Opportunity(Base, TimestampMixin):
     )
     extraction_confidence = Column(
         Float,
+        nullable=True,
+    )
+    embedding = Column(
+        VectorType,
         nullable=True,
     )
 

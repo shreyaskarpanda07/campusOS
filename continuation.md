@@ -7,39 +7,39 @@ CampusOS is an opportunity intelligence platform for university students built a
 
 ---
 
-## Current Status: Phase 5 (Deterministic Eligibility Engine) Complete
+## Current Status: Phase 6 (Embeddings & Vector Search Foundation) Complete
 
-The platform now features a deterministic, rule-based qualification checker (PRD FR-04) that evaluates hard academic constraints before recommendation ranking, producing transparent, human-readable explanations.
+The platform now features full semantic retrieval support using 1536-dimensional vector embeddings and pgvector (PRD FR-05, TECH_STACK §4-§5), with cross-database fallback for testing.
 
-### What Was Built in Phase 5:
-1. **Eligibility Engine Service** (`backend/app/services/eligibility.py`):
-   - Tri-state qualification decision:
-     - `eligible`: All known qualification criteria satisfied
-     - `ineligible`: One or more hard qualification rules failed (e.g. CGPA cutoff, graduation year, degree, branch)
-     - `uncertain`: Missing required student profile data or opportunity criteria
-   - Evaluates:
-     - Minimum CGPA thresholds with numeric comparison
-     - Graduation year batch matching
-     - Current year of study matching
-     - Degree level matching (e.g., B.Tech, B.S., M.S.)
-     - Branch / discipline matching with synonym normalization (e.g. "Computer Science & Engineering" matches "Computer Science")
-   - Generates human-readable explanations for every evaluated requirement.
-2. **Opportunity API Integration** (`backend/app/schemas/opportunity.py`, `backend/app/services/opportunity.py`, `backend/app/routers/opportunities.py`):
-   - Attached `eligibility_evaluation` (status, reasons, missing data) to `OpportunityRead` in list responses and `OpportunityDetail` in detail responses.
-   - Automatically resolves authenticated student context from `current_user` to provide real-time eligibility evaluation on all feeds.
-3. **Automated Backend Tests** (`backend/tests/test_eligibility.py`):
-   - 9 comprehensive unit and integration tests covering fully qualified students, CGPA cutoff rejections, graduation batch mismatches, discipline mismatches and synonym matches, uncertain results on missing profile fields, and full API integration. Total backend tests: **37 passing**.
-4. **Frontend Eligibility Badges & Detailed Breakdown** (`frontend/`):
-   - `OpportunityCard.tsx`: Displays real-time status pills (`✓ Eligible`, `✕ Ineligible`, `? Needs Info`) with tooltip reasons.
-   - `/opportunities/[id]` page: Features dedicated eligibility breakdown card showing passed/failed bullet points and callouts for missing profile information with direct link to `/profile`.
-   - 3 Vitest tests verifying badge rendering for all three status states (`frontend/__tests__/eligibility.test.ts`). Total frontend tests: **18 passing**.
+### What Was Built in Phase 6:
+1. **Model & Database Vector Support** (`backend/app/models/opportunity.py`, `backend/app/models/user.py`, `backend/migrations/versions/004_add_vector_embeddings.py`):
+   - Added `embedding` column of type `Vector(1536)` with `.with_variant(JSON(), "sqlite")` to `opportunities` and `users` tables.
+   - Alembic migration enabling PostgreSQL `vector` extension and creating an HNSW cosine index (`idx_opportunities_embedding USING hnsw (embedding vector_cosine_ops)`).
+2. **Embedding Service** (`backend/app/services/embedding.py`):
+   - Text serializers:
+     - `build_opportunity_text`: Formats title, organization, type, description, work mode, location, required/preferred skills, and academic eligibility requirements.
+     - `build_profile_text`: Formats degree, branch, university, academic year, skills with proficiency levels, interests, and preferences.
+   - Embedding generator (`generate_embedding`):
+     - Unit-normalized 1536-dimensional float vector generator.
+     - Deterministic token-hashing generator using n-grams, subwords, log-TF weighting, and SHA-256 projections to guarantee offline reproducibility without external API keys.
+     - Optional OpenAI API integration fallback if `OPENAI_API_KEY` is present.
+   - Vector search:
+     - `compute_cosine_similarity`: Unit-vector dot product calculation.
+     - `find_similar_opportunities`: High-performance cosine distance query using pgvector `<=>` on PostgreSQL, with in-memory SQLite fallback for test execution.
+   - Integrated automatic opportunity embedding generation into `OpportunityService.create_opportunity`.
+3. **Embeddings Backfill Utility** (`backend/scripts/generate_embeddings.py`):
+   - CLI utility with `--force` and `--batch-size` options to populate embeddings for existing opportunities and user profiles.
+4. **Backend Automated Tests** (`backend/tests/test_embeddings.py`):
+   - 11 new unit and integration tests covering text representation formatting, 1536 dimension validation, unit L2 normalization, deterministic reproducibility, semantic separation, vector persistence, similar opportunity ranking, and backfill logic.
+   - **Total Backend Tests: 48 passing**.
+   - **Total Frontend Tests: 18 passing**.
 
 ---
 
 ## Local Development Instructions
 
 ### 1. Database Setup
-Start PostgreSQL via Docker from the project root:
+Start PostgreSQL with pgvector via Docker from the project root:
 ```bash
 docker compose up -d postgres
 ```
@@ -50,22 +50,19 @@ Database credentials: `campusos` / `campusos` on port `5432`.
 cd backend
 
 # Create virtual environment (if not already created)
-python -m venv venv
-
-# Activate (Windows PowerShell)
-.\venv\Scripts\Activate.ps1
-
-# Activate (macOS/Linux)
-# source venv/bin/activate
+uv venv --python 3.13
 
 # Install dependencies
-pip install -r requirements.txt
+uv pip install -r requirements.txt
 
 # Run migrations to latest version
 alembic upgrade head
 
 # Seed sample opportunities
 python scripts/seed_opportunities.py
+
+# Backfill vector embeddings (if needed)
+python scripts/generate_embeddings.py
 
 # Start FastAPI server
 uvicorn app.main:app --reload --port 8000
@@ -76,15 +73,16 @@ uvicorn app.main:app --reload --port 8000
 ### 3. Run Backend Tests
 In `backend/`:
 ```bash
-pytest -v
+.\.venv\Scripts\pytest.exe -v
 ```
-All **37 tests** will pass:
+All **48 tests** will pass:
 - 4 Health check tests (`tests/test_health.py`)
 - 2 Config loading tests (`tests/test_config.py`)
 - 10 Auth & security tests (`tests/test_auth.py`)
 - 7 Profile & preferences tests (`tests/test_users.py`)
 - 5 Opportunity CRUD & discovery tests (`tests/test_opportunities.py`)
 - 9 Deterministic eligibility engine tests (`tests/test_eligibility.py`)
+- 11 Vector embeddings & similarity search tests (`tests/test_embeddings.py`)
 
 ### 4. Frontend Setup
 In a new terminal:
@@ -92,10 +90,10 @@ In a new terminal:
 cd frontend
 
 # Install dependencies
-npm install
+npm.cmd install
 
 # Run frontend dev server
-npm run dev
+npm.cmd run dev
 ```
 - Web Application: [http://localhost:3000](http://localhost:3000)
 - Discover Opportunities: [http://localhost:3000/discover](http://localhost:3000/discover)
@@ -104,26 +102,33 @@ npm run dev
 ### 5. Run Frontend Tests
 In `frontend/`:
 ```bash
-npm test
+npm.cmd test
 ```
 All **18 tests** will pass:
 - 3 API client & health check tests (`__tests__/api.test.ts`)
 - 5 Auth storage & authentication tests (`__tests__/auth.test.ts`)
 - 4 Profile management API tests (`__tests__/profile.test.ts`)
 - 3 Opportunity search & detail tests (`__tests__/opportunities.test.ts`)
-- 3 Eligibility badge rendering tests (`__tests__/eligibility.test.ts`)
+- 3 Eligibility badge rendering tests (`__tests__/eligibility.test.tsx`)
 
 ---
 
-## Next Step: Phase 6 — Embeddings & Vector Search Foundation
+## Next Step: Phase 7 — Recommendation Engine & Scoring Pipeline
 
-The next milestone introduces semantic similarity matching using vector embeddings (PRD FR-05, TECH_STACK §4):
-1. Configure `pgvector` extension in PostgreSQL migration `004_add_vector_embeddings`.
-2. Add `embedding` vector column (1536 dimensions) to `opportunities` and `users` (or a dedicated profile embedding model).
-3. Create `backend/app/services/embedding.py`:
-   - Text representation builder for opportunities (`title + organization + description + skills`).
-   - Text representation builder for user profiles (`degree + branch + skills + interests + preferred opportunity types`).
-   - Mock/Ollama/OpenAI embedding generator interface with graceful fallback.
-4. Implement vector indexing: HNSW index on opportunity embedding column.
-5. Create opportunity embedding backfill script (`scripts/generate_embeddings.py`).
-6. Write unit tests for embedding text serialization, dimension validation, and vector cosine similarity queries.
+The next milestone is implementing the multi-factor personalized recommendation scoring pipeline (PRD FR-05, FR-06, TECH_STACK §6):
+1. **Recommendation Scoring Service** (`backend/app/services/recommendation.py`):
+   - Multi-factor weighted formula:
+     ```
+     Final Score = 0.30 × Skill Match + 0.25 × Interest Match + 0.20 × Eligibility Fit + 0.15 × Deadline Urgency + 0.10 × Opportunity-Type Preference
+     ```
+   - Configurable weights stored in application settings.
+   - Filter pipeline: Candidates -> Deterministic Eligibility Filter -> Feature Extraction -> Scoring -> Top-K Ranking.
+2. **Transparent Explanation Generator** (PRD FR-06):
+   - Generates human-readable explanations from computed subscores (e.g. "92% match. You match 4 of 5 required skills (Python, PyTorch), meet the academic criteria (CGPA 8.5 >= 7.5), and have internships as a preferred category. Deadline in 5 days.").
+3. **Recommendation API Router** (`backend/app/routers/recommendations.py`):
+   - `GET /api/recommendations` — paginated personalized feed for authenticated student.
+   - `GET /api/recommendations/top` — quick dashboard widget.
+4. **Backend Recommendation Tests** (`backend/tests/test_recommendations.py`):
+   - Unit tests for each scoring feature, weighted combination, explanation generation, and router endpoints.
+5. **Frontend Personalized Recommendations UI**:
+   - `/recommendations` or home feed showing ranked cards with match percentages, score breakdowns, and "Why this?" modals/tooltips.

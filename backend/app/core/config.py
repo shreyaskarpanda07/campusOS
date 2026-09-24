@@ -29,6 +29,11 @@ class Settings(BaseSettings):
     # ── CORS ─────────────────────────────────────────────────────────
     CORS_ORIGINS: List[str] = ["http://localhost:3000"]
 
+    # ── Embeddings / AI ──────────────────────────────────────────────
+    OPENAI_API_KEY: str | None = None
+    EMBEDDING_MODEL: str = "text-embedding-3-small"
+    EMBEDDING_DIM: int = 1536
+
     model_config = {
         "env_file": ".env",
         "case_sensitive": True,
